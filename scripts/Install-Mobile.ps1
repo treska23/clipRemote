@@ -55,24 +55,81 @@ function Get-ConnectedDevices {
         ForEach-Object { $_ -replace '\s+device$', '' })
 }
 
+function Get-DeviceInfo {
+    param([string]$Adb, [string]$Serial)
+
+    $manufacturer = (& $Adb -s $Serial shell getprop ro.product.manufacturer 2>$null).Trim()
+    $model = (& $Adb -s $Serial shell getprop ro.product.model 2>$null).Trim()
+    $characteristics = (& $Adb -s $Serial shell getprop ro.build.characteristics 2>$null).Trim()
+
+    return [pscustomobject]@{
+        Serial = $Serial
+        Manufacturer = $manufacturer
+        Model = $model
+        Characteristics = $characteristics
+        IsTv = ($characteristics -match '(^|,)tv(,|$)' -or $manufacturer -match '^Sony$')
+        IsOppo = ($manufacturer -match '^(OPPO|Oppo)$')
+    }
+}
+
+function Select-MobileDevice {
+    param([string]$Adb, [string[]]$Serials, [string]$RequestedDevice)
+
+    if ($RequestedDevice) {
+        $exact = $Serials | Where-Object { $_ -eq $RequestedDevice } | Select-Object -First 1
+        if (-not $exact) {
+            throw "El dispositivo ADB solicitado '$RequestedDevice' no está conectado."
+        }
+
+        $info = Get-DeviceInfo $Adb $exact
+        if ($info.IsTv) {
+            throw "'$RequestedDevice' es $($info.Manufacturer) $($info.Model), un televisor. No voy a instalar ClipRemote ahí."
+        }
+        return $info
+    }
+
+    $infos = @($Serials | ForEach-Object { Get-DeviceInfo $Adb $_ })
+    if ($infos.Count -eq 0) { return $null }
+
+    Write-Host ''
+    Write-Host 'Dispositivos ADB detectados:' -ForegroundColor Cyan
+    for ($i = 0; $i -lt $infos.Count; $i++) {
+        $kind = if ($infos[$i].IsTv) { 'TV' } else { 'móvil/tablet' }
+        Write-Host "  [$($i + 1)] $($infos[$i].Manufacturer) $($infos[$i].Model) · $kind · $($infos[$i].Serial)"
+    }
+
+    $oppo = $infos | Where-Object { $_.IsOppo -and -not $_.IsTv } | Select-Object -First 1
+    if ($oppo) {
+        Write-Host "Seleccionado automáticamente: $($oppo.Manufacturer) $($oppo.Model)" -ForegroundColor Green
+        return $oppo
+    }
+
+    $mobiles = @($infos | Where-Object { -not $_.IsTv })
+    if ($mobiles.Count -eq 1) {
+        Write-Host "Seleccionado: $($mobiles[0].Manufacturer) $($mobiles[0].Model)" -ForegroundColor Green
+        return $mobiles[0]
+    }
+
+    if ($mobiles.Count -gt 1) {
+        throw 'Hay varios móviles/tablets ADB conectados y ninguno se identifica como OPPO. Usa -Device <serial> para elegir.'
+    }
+
+    return $null
+}
+
 function Ensure-WirelessDevice {
     param([string]$Adb, [string]$RequestedDevice)
 
-    if ($RequestedDevice) {
+    if ($RequestedDevice -and $RequestedDevice -match '^\d+\.\d+\.\d+\.\d+:\d+$') {
         & $Adb connect $RequestedDevice | Write-Host
     }
 
-    $devices = Get-ConnectedDevices $Adb
-    if ($devices.Count -gt 0) {
-        if ($RequestedDevice) {
-            $match = $devices | Where-Object { $_ -eq $RequestedDevice } | Select-Object -First 1
-            if ($match) { return $match }
-        }
-        return $devices[0]
-    }
+    $serials = Get-ConnectedDevices $Adb
+    $selected = Select-MobileDevice $Adb $serials $RequestedDevice
+    if ($selected) { return $selected }
 
     Write-Host ''
-    Write-Host 'No hay ningún Oppo conectado por ADB.' -ForegroundColor Yellow
+    Write-Host 'No hay ningún móvil válido conectado por ADB.' -ForegroundColor Yellow
     Write-Host 'En el Oppo abre: Opciones de desarrollador > Depuración inalámbrica.'
     Write-Host 'Pulsa "Vincular dispositivo con código de vinculación".'
     $pairEndpoint = Read-Host 'Escribe aquí la IP:PUERTO de vinculación (Enter para cancelar)'
@@ -91,13 +148,13 @@ function Ensure-WirelessDevice {
     }
 
     & $Adb connect $connectEndpoint | Write-Host
-    $devices = Get-ConnectedDevices $Adb
-    $match = $devices | Where-Object { $_ -eq $connectEndpoint } | Select-Object -First 1
-    if (-not $match) {
-        throw 'El Oppo se emparejó, pero ADB no aparece conectado.'
+    $serials = Get-ConnectedDevices $Adb
+    $selected = Select-MobileDevice $Adb $serials $connectEndpoint
+    if (-not $selected) {
+        throw 'El Oppo se emparejó, pero no aparece como dispositivo ADB válido.'
     }
 
-    return $match
+    return $selected
 }
 
 function Get-DeviceAbi {
@@ -157,13 +214,15 @@ function Get-AgentProvisioning {
 }
 
 $adb = Find-Adb
-$serial = Ensure-WirelessDevice $adb $Device
+$deviceInfo = Ensure-WirelessDevice $adb $Device
+$serial = $deviceInfo.Serial
 $apkPath = Find-Apk $Apk
 $abiList = Get-DeviceAbi $adb $serial
 Assert-ApkLooksCompatible $abiList $apkPath
 
 Write-Host "ADB: $adb"
-Write-Host "Oppo: $serial"
+Write-Host "Móvil: $($deviceInfo.Manufacturer) $($deviceInfo.Model)"
+Write-Host "Serial: $serial"
 Write-Host "ABI: $abiList"
 Write-Host "APK: $apkPath"
 Write-Host 'Instalando/actualizando ClipRemote...'
@@ -175,17 +234,23 @@ if ($LASTEXITCODE -ne 0) {
 
 $provisioning = Get-AgentProvisioning
 & $adb -s $serial shell am force-stop com.treska23.clipremote | Out-Null
+$component = 'com.treska23.clipremote/com.treska23.clipremote.MainActivity'
 
 if ($provisioning) {
     Write-Host "Configurando automáticamente el Agent en $($provisioning.Address)..."
-    & $adb -s $serial shell am start `
-        -n com.treska23.clipremote/.MainActivity `
+    $launchOutput = & $adb -s $serial shell am start -W `
+        -n $component `
         --es address $provisioning.Address `
         --es token $provisioning.Token `
-        --ez autoconnect true | Out-Null
+        --ez autoconnect true 2>&1
 } else {
     Write-Host 'No pude leer la configuración local del Agent; abro la app para configurarla a mano.' -ForegroundColor Yellow
-    & $adb -s $serial shell am start -n com.treska23.clipremote/.MainActivity | Out-Null
+    $launchOutput = & $adb -s $serial shell am start -W -n $component 2>&1
+}
+
+$launchOutput | Write-Host
+if ($LASTEXITCODE -ne 0 -or ($launchOutput -join "`n") -match 'Error type|does not exist|unable to resolve') {
+    throw 'ClipRemote se instaló, pero Android no pudo abrir la Activity.'
 }
 
 Write-Host 'ClipRemote instalado y abierto en el Oppo.' -ForegroundColor Green
