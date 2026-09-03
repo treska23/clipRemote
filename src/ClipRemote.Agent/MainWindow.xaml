@@ -1,0 +1,62 @@
+<Window x:Class="ClipRemote.Agent.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ClipRemote Agent"
+        Width="560"
+        Height="420"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BackgroundBrush}"
+        Foreground="{StaticResource TextBrush}">
+    <Grid Margin="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="18" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock Text="ClipRemote" FontSize="30" FontWeight="SemiBold" />
+            <TextBlock Text="Agente local para Clip Studio Paint"
+                       Margin="0,4,0,0"
+                       Foreground="{StaticResource MutedTextBrush}" />
+        </StackPanel>
+
+        <Border Grid.Row="2"
+                Padding="22"
+                CornerRadius="14"
+                Background="{StaticResource PanelBrush}">
+            <StackPanel>
+                <TextBlock Text="ESTADO" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedTextBrush}" />
+                <TextBlock Text="{Binding Status}" Margin="0,5,0,18" FontSize="20" Foreground="{StaticResource AccentBrush}" />
+
+                <TextBlock Text="DIRECCIÓN DEL PC" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedTextBrush}" />
+                <TextBox Text="{Binding Address}"
+                         Margin="0,5,0,18"
+                         IsReadOnly="True"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         Foreground="{StaticResource TextBrush}"
+                         FontSize="16" />
+
+                <TextBlock Text="TOKEN DE EMPAREJAMIENTO" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedTextBrush}" />
+                <TextBox Text="{Binding PairingToken}"
+                         Margin="0,5,0,18"
+                         IsReadOnly="True"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         Foreground="{StaticResource TextBrush}"
+                         FontFamily="Consolas"
+                         FontSize="15" />
+
+                <TextBlock Text="CONFIGURACIÓN" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedTextBrush}" />
+                <TextBox Text="{Binding SettingsPath}"
+                         Margin="0,5,0,0"
+                         IsReadOnly="True"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         Foreground="{StaticResource MutedTextBrush}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
