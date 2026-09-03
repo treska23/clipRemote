@@ -1,0 +1,29 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  windows-agent:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore ClipRemote.sln
+
+      - name: Build
+        run: dotnet build ClipRemote.sln --configuration Release --no-restore
+
+      - name: Publish portable Surface build
+        run: dotnet publish .\src\ClipRemote.Agent\ClipRemote.Agent.csproj -c Release -r win-x64 --self-contained true --no-restore -o .\artifacts\ClipRemote.Agent
