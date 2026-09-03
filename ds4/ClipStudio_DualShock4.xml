@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Clip Studio Paint drawing profile for DualShock 4 - remotely maintained -->
+<!-- Compatible with DS4Windows profile schema v5 -->
+<DS4Windows app_version="3.3.3" config_version="5">
+  <touchToggle>True</touchToggle>
+  <idleDisconnectTimeout>0</idleDisconnectTimeout>
+  <outputDataToDS4>True</outputDataToDS4>
+  <Color>55,95,180</Color>
+  <RumbleBoost>100</RumbleBoost>
+  <RumbleAutostopTime>0</RumbleAutostopTime>
+  <LightbarMode>DS4Win</LightbarMode>
+  <ledAsBatteryIndicator>False</ledAsBatteryIndicator>
+  <FlashType>0</FlashType>
+  <flashBatteryAt>0</flashBatteryAt>
+  <touchSensitivity>100</touchSensitivity>
+  <LowColor>0,0,0</LowColor>
+  <ChargingColor>0,0,0</ChargingColor>
+  <FlashColor>0,0,0</FlashColor>
+  <touchpadJitterCompensation>True</touchpadJitterCompensation>
+  <lowerRCOn>False</lowerRCOn>
+  <tapSensitivity>0</tapSensitivity>
+  <doubleTap>False</doubleTap>
+  <scrollSensitivity>0</scrollSensitivity>
+  <LeftTriggerMiddle>0</LeftTriggerMiddle>
+  <RightTriggerMiddle>0</RightTriggerMiddle>
+  <TouchpadInvert>0</TouchpadInvert>
+  <TouchpadClickPassthru>False</TouchpadClickPassthru>
+  <L2AntiDeadZone>0</L2AntiDeadZone>
+  <R2AntiDeadZone>0</R2AntiDeadZone>
+  <L2MaxZone>100</L2MaxZone>
+  <R2MaxZone>100</R2MaxZone>
+  <L2MaxOutput>100</L2MaxOutput>
+  <R2MaxOutput>100</R2MaxOutput>
+  <ButtonMouseSensitivity>24</ButtonMouseSensitivity>
+  <ButtonMouseOffset>0.01</ButtonMouseOffset>
+  <Rainbow>0</Rainbow>
+  <MaxSatRainbow>100</MaxSatRainbow>
+
+  <!-- Stick deadzones: enough to avoid accidental layer/canvas movement -->
+  <LSDeadZone>35</LSDeadZone>
+  <RSDeadZone>25</RSDeadZone>
+  <LSAntiDeadZone>0</LSAntiDeadZone>
+  <RSAntiDeadZone>0</RSAntiDeadZone>
+  <LSMaxZone>100</LSMaxZone>
+  <RSMaxZone>100</RSMaxZone>
+  <LSVerticalScale>100</LSVerticalScale>
+  <RSVerticalScale>100</RSVerticalScale>
+  <LSMaxOutput>100</LSMaxOutput>
+  <RSMaxOutput>100</RSMaxOutput>
+  <LSMaxOutputForce>False</LSMaxOutputForce>
+  <RSMaxOutputForce>False</RSMaxOutputForce>
+  <LSDeadZoneType>Radial</LSDeadZoneType>
+  <RSDeadZoneType>Radial</RSDeadZoneType>
+
+  <Sensitivity>1|1|1|1|1|1</Sensitivity>
+  <ChargingType>0</ChargingType>
+  <MouseAcceleration>False</MouseAcceleration>
+  <ButtonMouseVerticalScale>100</ButtonMouseVerticalScale>
+  <LaunchProgram />
+
+  <!-- No virtual Xbox pad is needed for Clip Studio -->
+  <DinputOnly>True</DinputOnly>
+  <StartTouchpadOff>False</StartTouchpadOff>
+
+  <!-- Finger on DS4 touchpad = mouse pointer -->
+  <TouchpadOutputMode>Mouse</TouchpadOutputMode>
+  <TrackballMode>False</TrackballMode>
+  <TrackballFriction>10</TrackballFriction>
+  <TouchRelMouseRotation>0</TouchRelMouseRotation>
+  <TouchRelMouseMinThreshold>1</TouchRelMouseMinThreshold>
+  <TouchpadAbsMouseSettings>
+    <MaxZoneX>90</MaxZoneX>
+    <MaxZoneY>90</MaxZoneY>
+    <SnapToCenter>False</SnapToCenter>
+  </TouchpadAbsMouseSettings>
+  <TouchpadMouseStick>
+    <DeadZone>0</DeadZone>
+    <MaxZone>8</MaxZone>
+    <OutputStick>RightStick</OutputStick>
+    <OutputStickAxes>XY</OutputStickAxes>
+    <AntiDeadX>0.4</AntiDeadX>
+    <AntiDeadY>0.4</AntiDeadY>
+    <Invert>0</Invert>
+    <MaxOutput>100</MaxOutput>
+    <MaxOutputEnabled>False</MaxOutputEnabled>
+    <VerticalScale>100</VerticalScale>
+    <OutputCurve>Linear</OutputCurve>
+    <Rotation>0</Rotation>
+    <SmoothingSettings>
+      <SmoothingMethod>None</SmoothingMethod>
+      <SmoothingMinCutoff>0.8</SmoothingMinCutoff>
+      <SmoothingBeta>0.7</SmoothingBeta>
+    </SmoothingSettings>
+  </TouchpadMouseStick>
+  <TouchpadButtonMode>Click</TouchpadButtonMode>
+
+  <OutputContDevice>X360</OutputContDevice>
+  <ProfileActions />
+
+  <Control>
+    <Button>
+      <!-- R3 = right mouse click -->
+      <R3>Right Mouse Button</R3>
+      <PS>Unbound</PS>
+    </Button>
+
+    <Key>
+      <!-- Face buttons -->
+      <!-- X / Cross = exact "Lápiz más oscuro", assigned by installer to F5 -->
+      <Cross>116</Cross>
+      <!-- Triangle = Brush tool (B) -->
+      <Triangle>66</Triangle>
+      <!-- Square = Pen tool (P) -->
+      <Square>80</Square>
+      <!-- Circle = Eraser tool (E) -->
+      <Circle>69</Circle>
+
+      <!-- D-pad: current tool properties -->
+      <!-- Up / Down = brush size + / - (Clip Studio defaults 1 / 2) -->
+      <DpadUp>49</DpadUp>
+      <DpadDown>50</DpadDown>
+
+      <!-- Left / Right = stabilization - / + -->
+      <DpadLeft>117</DpadLeft>
+      <DpadRight>118</DpadRight>
+
+      <!-- L2 / R2 = zoom - / + -->
+      <L2>119</L2>
+      <R2>120</R2>
+
+      <!-- L1 delete layer, R1 new raster layer -->
+      <L1>122</L1>
+      <R1>121</R1>
+
+      <!-- Left stick vertical = layer navigation -->
+      <LYNeg>123</LYNeg>
+      <LYPos>124</LYPos>
+
+      <!-- Right stick = canvas movement -->
+      <!-- Horizontal inverted: stick left moves page left, stick right moves page right -->
+      <RXNeg>126</RXNeg>
+      <RXPos>125</RXPos>
+      <!-- Vertical inverted to match natural page movement -->
+      <RYNeg>128</RYNeg>
+      <RYPos>127</RYPos>
+    </Key>
+
+    <KeyType />
+  </Control>
+
+  <ShiftControl />
+</DS4Windows>
