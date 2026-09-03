@@ -6,13 +6,14 @@ using Android.Content;
 using Android.Content.PM;
 using Android.Graphics;
 using Android.OS;
-using Android.Text.InputMethods;
 using Android.Views;
+using Android.Views.InputMethods;
 using Android.Widget;
 
 namespace ClipRemote.Mobile;
 
 [Activity(
+    Name = "com.treska23.clipremote.MainActivity",
     Label = "ClipRemote",
     MainLauncher = true,
     Exported = true,
@@ -24,16 +25,16 @@ public sealed class MainActivity : Activity
     private const string AddressPreference = "address";
     private const string TokenPreference = "token";
 
-    private readonly SemaphoreSlim _socketGate = new(1, 1);
-    private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly JsonSerializerOptions _json = new(JsonSerializerDefaults.Web);
 
     private ClientWebSocket? _socket;
-    private EditText _addressText = null!;
-    private EditText _tokenText = null!;
-    private TextView _statusText = null!;
-    private Button _connectButton = null!;
-    private Button _undoButton = null!;
-    private Button _redoButton = null!;
+    private EditText _address = null!;
+    private EditText _token = null!;
+    private TextView _status = null!;
+    private Button _connect = null!;
+    private Button _undo = null!;
+    private Button _redo = null!;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -43,122 +44,108 @@ public sealed class MainActivity : Activity
 
         SetContentView(BuildUi());
         LoadSavedConnection();
-        SetControlsConnected(false);
+        var autoConnect = ApplyProvisioning(Intent);
+        SetConnected(false);
+
+        if (autoConnect)
+        {
+            _ = ConnectAsync();
+        }
     }
 
     protected override void OnDestroy()
     {
-        try
-        {
-            _socket?.Dispose();
-            _socket = null;
-        }
-        finally
-        {
-            _socketGate.Dispose();
-            base.OnDestroy();
-        }
+        _socket?.Dispose();
+        _socket = null;
+        _gate.Dispose();
+        base.OnDestroy();
     }
 
     private View BuildUi()
     {
-        var root = new ScrollView(this)
+        var scroll = new ScrollView(this) { FillViewport = true };
+        scroll.SetBackgroundColor(Color.ParseColor("#101419"));
+
+        var root = new LinearLayout(this) { Orientation = Orientation.Vertical };
+        root.SetPadding(Dp(22), Dp(28), Dp(22), Dp(28));
+
+        root.AddView(Text("ClipRemote", 30, Color.White, TypefaceStyle.Bold));
+        root.AddView(Text("Control local de Clip Studio Paint", 16, "#AAB3BE", bottom: 26));
+
+        _status = Text("DESCONECTADO", 17, "#E0A94F", TypefaceStyle.Bold, bottom: 24);
+        root.AddView(_status);
+
+        root.AddView(Label("DIRECCIÓN DEL PC"));
+        _address = Input("192.168.1.3:5057");
+        root.AddView(_address, Params(54, bottom: 18));
+
+        root.AddView(Label("TOKEN DE EMPAREJAMIENTO"));
+        _token = Input("Token del Agent");
+        _token.InputType = Android.Text.InputTypes.ClassText |
+                           Android.Text.InputTypes.TextVariationVisiblePassword;
+        root.AddView(_token, Params(54, bottom: 20));
+
+        _connect = Button("CONECTAR");
+        _connect.Click += async (_, _) =>
         {
-            FillViewport = true
+            if (_socket?.State == WebSocketState.Open)
+            {
+                await DisconnectAsync();
+            }
+            else
+            {
+                await ConnectAsync();
+            }
         };
-        root.SetBackgroundColor(Color.ParseColor("#101419"));
+        root.AddView(_connect, Params(58, bottom: 32));
 
-        var content = new LinearLayout(this)
-        {
-            Orientation = Orientation.Vertical
-        };
-        content.SetPadding(Dp(22), Dp(28), Dp(22), Dp(28));
+        root.AddView(Label("PRIMERA PRUEBA"));
 
-        content.AddView(CreateText("ClipRemote", 30, Color.White, TypefaceStyle.Bold));
-        content.AddView(CreateText(
-            "Control local de Clip Studio Paint",
-            16,
-            Color.ParseColor("#AAB3BE"),
-            TypefaceStyle.Normal,
-            topMargin: 4,
-            bottomMargin: 28));
-
-        _statusText = CreateText("DESCONECTADO", 17, Color.ParseColor("#E0A94F"), TypefaceStyle.Bold);
-        content.AddView(_statusText, WithMargins(matchWidth: true, height: WrapContent, bottom: 22));
-
-        content.AddView(CreateLabel("DIRECCIÓN DEL PC"));
-        _addressText = CreateInput("192.168.1.3:5057", singleLine: true);
-        content.AddView(_addressText, WithMargins(matchWidth: true, height: Dp(54), bottom: 18));
-
-        content.AddView(CreateLabel("TOKEN DE EMPAREJAMIENTO"));
-        _tokenText = CreateInput("Pega aquí el token del Agent", singleLine: true);
-        _tokenText.InputType = Android.Text.InputTypes.ClassText |
-                               Android.Text.InputTypes.TextVariationVisiblePassword;
-        content.AddView(_tokenText, WithMargins(matchWidth: true, height: Dp(54), bottom: 20));
-
-        _connectButton = CreateButton("CONECTAR");
-        _connectButton.Click += async (_, _) => await ToggleConnectionAsync();
-        content.AddView(_connectButton, WithMargins(matchWidth: true, height: Dp(58), bottom: 32));
-
-        content.AddView(CreateText("ANIMACIÓN / EDICIÓN", 13, Color.ParseColor("#AAB3BE"), TypefaceStyle.Bold));
-
-        var actionRow = new LinearLayout(this)
+        var row = new LinearLayout(this)
         {
             Orientation = Orientation.Horizontal,
             WeightSum = 2f
         };
 
-        _undoButton = CreateButton("DESHACER");
-        _redoButton = CreateButton("REHACER");
-        _undoButton.Click += async (_, _) => await SendActionAsync("undo");
-        _redoButton.Click += async (_, _) => await SendActionAsync("redo");
+        _undo = Button("DESHACER");
+        _redo = Button("REHACER");
+        _undo.Click += async (_, _) => await SendActionAsync("undo");
+        _redo.Click += async (_, _) => await SendActionAsync("redo");
 
-        actionRow.AddView(_undoButton, WeightedButtonParams(rightMargin: 6));
-        actionRow.AddView(_redoButton, WeightedButtonParams(leftMargin: 6));
-        content.AddView(actionRow, WithMargins(matchWidth: true, height: Dp(72), top: 10));
+        row.AddView(_undo, Weighted(right: 6));
+        row.AddView(_redo, Weighted(left: 6));
+        root.AddView(row, Params(72, top: 8));
 
-        content.AddView(CreateText(
-            "Primera prueba: abre Clip Studio Paint en el PC, haz un trazo y pulsa DESHACER.",
+        root.AddView(Text(
+            "Con Clip Studio en primer plano, haz un trazo y pulsa DESHACER.",
             14,
-            Color.ParseColor("#7F8995"),
-            TypefaceStyle.Normal,
-            topMargin: 24));
+            "#7F8995",
+            top: 22));
 
-        root.AddView(content, new ScrollView.LayoutParams(
+        scroll.AddView(root, new ScrollView.LayoutParams(
             ViewGroup.LayoutParams.MatchParent,
             ViewGroup.LayoutParams.WrapContent));
-        return root;
-    }
-
-    private async Task ToggleConnectionAsync()
-    {
-        if (_socket?.State == WebSocketState.Open)
-        {
-            await DisconnectAsync();
-            return;
-        }
-
-        await ConnectAsync();
+        return scroll;
     }
 
     private async Task<bool> ConnectAsync()
     {
-        var address = NormalizeAddress(_addressText.Text);
-        var token = _tokenText.Text?.Trim() ?? string.Empty;
+        var address = NormalizeAddress(_address.Text);
+        var token = _token.Text?.Trim() ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(address) || string.IsNullOrWhiteSpace(token))
         {
-            SetStatus("FALTA DIRECCIÓN O TOKEN", success: false);
+            SetStatus("FALTA DIRECCIÓN O TOKEN", false);
             return false;
         }
 
         HideKeyboard();
-        SetStatus("CONECTANDO…", success: null);
-        _connectButton.Enabled = false;
+        SetStatus("CONECTANDO…", null);
+        RunOnUiThread(() => _connect.Enabled = false);
 
         try
         {
-            await _socketGate.WaitAsync();
+            await _gate.WaitAsync();
             try
             {
                 _socket?.Dispose();
@@ -171,30 +158,30 @@ public sealed class MainActivity : Activity
             }
             finally
             {
-                _socketGate.Release();
+                _gate.Release();
             }
 
-            SetStatus("CONECTADO", success: true);
-            SetControlsConnected(true);
+            SetStatus("CONECTADO", true);
+            SetConnected(true);
             return true;
         }
         catch (Exception ex)
         {
             _socket?.Dispose();
             _socket = null;
-            SetStatus($"NO CONECTA · {FriendlyError(ex)}", success: false);
-            SetControlsConnected(false);
+            SetStatus($"NO CONECTA · {FriendlyError(ex)}", false);
+            SetConnected(false);
             return false;
         }
         finally
         {
-            _connectButton.Enabled = true;
+            RunOnUiThread(() => _connect.Enabled = true);
         }
     }
 
     private async Task DisconnectAsync()
     {
-        await _socketGate.WaitAsync();
+        await _gate.WaitAsync();
         try
         {
             if (_socket?.State == WebSocketState.Open)
@@ -209,7 +196,7 @@ public sealed class MainActivity : Activity
                 }
                 catch
                 {
-                    // Closing is best-effort; disposing below is enough.
+                    // Dispose below is enough if the graceful close fails.
                 }
             }
 
@@ -218,11 +205,11 @@ public sealed class MainActivity : Activity
         }
         finally
         {
-            _socketGate.Release();
+            _gate.Release();
         }
 
-        SetStatus("DESCONECTADO", success: null);
-        SetControlsConnected(false);
+        SetStatus("DESCONECTADO", null);
+        SetConnected(false);
     }
 
     private async Task SendActionAsync(string action)
@@ -232,32 +219,32 @@ public sealed class MainActivity : Activity
             return;
         }
 
-        await _socketGate.WaitAsync();
+        await _gate.WaitAsync();
         try
         {
             if (_socket?.State != WebSocketState.Open)
             {
-                SetStatus("CONEXIÓN PERDIDA", success: false);
-                SetControlsConnected(false);
+                SetStatus("CONEXIÓN PERDIDA", false);
+                SetConnected(false);
                 return;
             }
 
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-            var request = JsonSerializer.Serialize(new ActionRequest("action", action), _jsonOptions);
-            var requestBytes = Encoding.UTF8.GetBytes(request);
+            var payload = Encoding.UTF8.GetBytes(
+                JsonSerializer.Serialize(new ActionRequest("action", action), _json));
 
             await _socket.SendAsync(
-                new ArraySegment<byte>(requestBytes),
+                new ArraySegment<byte>(payload),
                 WebSocketMessageType.Text,
                 true,
                 timeout.Token);
 
-            var responseText = await ReceiveTextAsync(_socket, timeout.Token);
-            var response = JsonSerializer.Deserialize<ActionResponse>(responseText, _jsonOptions);
+            var responseJson = await ReceiveTextAsync(_socket, timeout.Token);
+            var response = JsonSerializer.Deserialize<ActionResponse>(responseJson, _json);
 
             if (response is null)
             {
-                SetStatus("RESPUESTA NO VÁLIDA", success: false);
+                SetStatus("RESPUESTA NO VÁLIDA", false);
                 return;
             }
 
@@ -267,12 +254,12 @@ public sealed class MainActivity : Activity
         {
             _socket?.Dispose();
             _socket = null;
-            SetStatus($"CONEXIÓN PERDIDA · {FriendlyError(ex)}", success: false);
-            SetControlsConnected(false);
+            SetStatus($"CONEXIÓN PERDIDA · {FriendlyError(ex)}", false);
+            SetConnected(false);
         }
         finally
         {
-            _socketGate.Release();
+            _gate.Release();
         }
     }
 
@@ -285,10 +272,7 @@ public sealed class MainActivity : Activity
 
         while (true)
         {
-            var result = await socket.ReceiveAsync(
-                new ArraySegment<byte>(buffer),
-                cancellationToken);
-
+            var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
             if (result.MessageType == WebSocketMessageType.Close)
             {
                 throw new WebSocketException("El Agent cerró la conexión.");
@@ -312,11 +296,39 @@ public sealed class MainActivity : Activity
         }
     }
 
+    private bool ApplyProvisioning(Intent? intent)
+    {
+        if (intent is null)
+        {
+            return false;
+        }
+
+        var address = intent.GetStringExtra("address")?.Trim();
+        var token = intent.GetStringExtra("token")?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(address))
+        {
+            _address.Text = NormalizeAddress(address);
+        }
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            _token.Text = token;
+        }
+
+        if (!string.IsNullOrWhiteSpace(address) && !string.IsNullOrWhiteSpace(token))
+        {
+            SaveConnection(_address.Text ?? string.Empty, _token.Text ?? string.Empty);
+        }
+
+        return intent.GetBooleanExtra("autoconnect", false);
+    }
+
     private void LoadSavedConnection()
     {
         var preferences = GetSharedPreferences(PreferencesName, FileCreationMode.Private);
-        _addressText.Text = preferences?.GetString(AddressPreference, string.Empty) ?? string.Empty;
-        _tokenText.Text = preferences?.GetString(TokenPreference, string.Empty) ?? string.Empty;
+        _address.Text = preferences?.GetString(AddressPreference, string.Empty) ?? string.Empty;
+        _token.Text = preferences?.GetString(TokenPreference, string.Empty) ?? string.Empty;
     }
 
     private void SaveConnection(string address, string token)
@@ -327,29 +339,23 @@ public sealed class MainActivity : Activity
         editor?.Apply();
     }
 
-    private void SetControlsConnected(bool connected)
+    private void SetConnected(bool connected) => RunOnUiThread(() =>
     {
-        RunOnUiThread(() =>
-        {
-            _connectButton.Text = connected ? "DESCONECTAR" : "CONECTAR";
-            _undoButton.Enabled = connected;
-            _redoButton.Enabled = connected;
-        });
-    }
+        _connect.Text = connected ? "DESCONECTAR" : "CONECTAR";
+        _undo.Enabled = connected;
+        _redo.Enabled = connected;
+    });
 
-    private void SetStatus(string text, bool? success)
+    private void SetStatus(string text, bool? success) => RunOnUiThread(() =>
     {
-        RunOnUiThread(() =>
+        _status.Text = text;
+        _status.SetTextColor(success switch
         {
-            _statusText.Text = text;
-            _statusText.SetTextColor(success switch
-            {
-                true => Color.ParseColor("#36C98F"),
-                false => Color.ParseColor("#EF6A6A"),
-                _ => Color.ParseColor("#E0A94F")
-            });
+            true => Color.ParseColor("#36C98F"),
+            false => Color.ParseColor("#EF6A6A"),
+            _ => Color.ParseColor("#E0A94F")
         });
-    }
+    });
 
     private void HideKeyboard()
     {
@@ -358,41 +364,42 @@ public sealed class MainActivity : Activity
         CurrentFocus?.ClearFocus();
     }
 
-    private TextView CreateLabel(string text) =>
-        CreateText(text, 12, Color.ParseColor("#AAB3BE"), TypefaceStyle.Bold, bottomMargin: 6);
+    private TextView Label(string value) =>
+        Text(value, 12, "#AAB3BE", TypefaceStyle.Bold, bottom: 6);
 
-    private TextView CreateText(
-        string text,
+    private TextView Text(
+        string value,
+        float size,
+        string color,
+        TypefaceStyle style = TypefaceStyle.Normal,
+        int top = 0,
+        int bottom = 0) =>
+        Text(value, size, Color.ParseColor(color), style, top, bottom);
+
+    private TextView Text(
+        string value,
         float size,
         Color color,
-        TypefaceStyle style,
-        int topMargin = 0,
-        int bottomMargin = 0)
+        TypefaceStyle style = TypefaceStyle.Normal,
+        int top = 0,
+        int bottom = 0)
     {
-        var view = new TextView(this)
-        {
-            Text = text,
-            TextSize = size
-        };
+        var view = new TextView(this) { Text = value, TextSize = size };
         view.SetTextColor(color);
         view.SetTypeface(Typeface.Default, style);
-        view.LayoutParameters = WithMargins(
-            matchWidth: true,
-            height: WrapContent,
-            top: topMargin,
-            bottom: bottomMargin);
+        view.LayoutParameters = Params(ViewGroup.LayoutParams.WrapContent, top, bottom);
         return view;
     }
 
-    private EditText CreateInput(string hint, bool singleLine)
+    private EditText Input(string hint)
     {
         var input = new EditText(this)
         {
             Hint = hint,
             TextSize = 16,
-            SingleLine = singleLine,
             InputType = Android.Text.InputTypes.ClassText
         };
+        input.SetSingleLine(true);
         input.SetTextColor(Color.White);
         input.SetHintTextColor(Color.ParseColor("#66717D"));
         input.SetBackgroundColor(Color.ParseColor("#202730"));
@@ -400,43 +407,31 @@ public sealed class MainActivity : Activity
         return input;
     }
 
-    private Button CreateButton(string text)
+    private Button Button(string value)
     {
-        var button = new Button(this)
-        {
-            Text = text,
-            TextSize = 15
-        };
+        var button = new Button(this) { Text = value, TextSize = 15 };
         button.SetTextColor(Color.White);
         button.SetBackgroundColor(Color.ParseColor("#2C6BE8"));
         return button;
     }
 
-    private LinearLayout.LayoutParams WeightedButtonParams(int leftMargin = 0, int rightMargin = 0)
+    private LinearLayout.LayoutParams Params(int heightDp, int top = 0, int bottom = 0)
     {
-        var parameters = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MatchParent, 1f);
-        parameters.LeftMargin = Dp(leftMargin);
-        parameters.RightMargin = Dp(rightMargin);
-        return parameters;
+        var height = heightDp < 0 ? heightDp : Dp(heightDp);
+        var result = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, height);
+        result.SetMargins(0, Dp(top), 0, Dp(bottom));
+        return result;
     }
 
-    private LinearLayout.LayoutParams WithMargins(
-        bool matchWidth,
-        int height,
-        int left = 0,
-        int top = 0,
-        int right = 0,
-        int bottom = 0)
+    private LinearLayout.LayoutParams Weighted(int left = 0, int right = 0)
     {
-        var parameters = new LinearLayout.LayoutParams(
-            matchWidth ? ViewGroup.LayoutParams.MatchParent : ViewGroup.LayoutParams.WrapContent,
-            height);
-        parameters.SetMargins(Dp(left), Dp(top), Dp(right), Dp(bottom));
-        return parameters;
+        var result = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MatchParent, 1f);
+        result.SetMargins(Dp(left), 0, Dp(right), 0);
+        return result;
     }
 
     private int Dp(int value) =>
-        (int)Math.Round(value * Resources!.DisplayMetrics!.Density);
+        (int)Math.Round(value * (Resources?.DisplayMetrics?.Density ?? 1f));
 
     private static string NormalizeAddress(string? address)
     {
@@ -446,12 +441,9 @@ public sealed class MainActivity : Activity
             .Replace("http://", string.Empty, StringComparison.OrdinalIgnoreCase)
             .TrimEnd('/');
 
-        if (value.EndsWith("/ws", StringComparison.OrdinalIgnoreCase))
-        {
-            value = value[..^3].TrimEnd('/');
-        }
-
-        return value;
+        return value.EndsWith("/ws", StringComparison.OrdinalIgnoreCase)
+            ? value[..^3].TrimEnd('/')
+            : value;
     }
 
     private static string FriendlyError(Exception exception) => exception switch
@@ -460,8 +452,6 @@ public sealed class MainActivity : Activity
         WebSocketException => "WEBSOCKET",
         _ => exception.Message
     };
-
-    private const int WrapContent = ViewGroup.LayoutParams.WrapContent;
 
     private sealed record ActionRequest(string Type, string Action);
     private sealed record ActionResponse(bool Success, string Message, string? Action = null);
