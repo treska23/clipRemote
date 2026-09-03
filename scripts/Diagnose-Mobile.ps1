@@ -96,10 +96,10 @@ $startOutput | ForEach-Object { Write-Host $_ }
 
 Start-Sleep -Seconds 2
 
-$pid = ((& $adb -s $serial shell pidof $package 2>$null) -join '').Trim()
+$processId = ((& $adb -s $serial shell pidof $package 2>$null) -join '').Trim()
 Write-Host ''
-if ($pid) {
-    Write-Host "PROCESO VIVO · PID $pid" -ForegroundColor Green
+if ($processId) {
+    Write-Host "PROCESO VIVO · PID $processId" -ForegroundColor Green
 } else {
     Write-Host 'PROCESO MUERTO · la app se cerró después de arrancar' -ForegroundColor Red
 }
@@ -122,7 +122,7 @@ $relevant = $logs | Where-Object {
 }
 
 if ($relevant) {
-    $relevant | Select-Object -Last 120 | ForEach-Object { Write-Host $_ }
+    $relevant | Select-Object -Last 160 | ForEach-Object { Write-Host $_ }
 } else {
     Write-Host '(No aparecen errores relevantes en logcat.)'
 }
