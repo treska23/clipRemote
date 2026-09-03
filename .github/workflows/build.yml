@@ -51,28 +51,28 @@ jobs:
         shell: pwsh
         run: dotnet workload install android
 
-      - name: Restore Android app
-        run: dotnet restore .\src\ClipRemote.Mobile\ClipRemote.Mobile.csproj
+      - name: Restore Android ARM64 app
+        run: dotnet restore .\src\ClipRemote.Mobile\ClipRemote.Mobile.csproj -r android-arm64
 
-      - name: Build installable APK
-        run: dotnet build .\src\ClipRemote.Mobile\ClipRemote.Mobile.csproj -c Debug -f net10.0-android --no-restore -p:AndroidPackageFormat=apk
+      - name: Build installable ARM64 APK
+        run: dotnet build .\src\ClipRemote.Mobile\ClipRemote.Mobile.csproj -c Debug -f net10.0-android -r android-arm64 --no-restore -p:AndroidPackageFormat=apk
 
       - name: Collect APK
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force .\artifacts\ClipRemote.Mobile | Out-Null
-          $apk = Get-ChildItem .\src\ClipRemote.Mobile\bin\Debug\net10.0-android -Recurse -Filter '*-Signed.apk' | Select-Object -First 1
+          $apk = Get-ChildItem .\src\ClipRemote.Mobile\bin\Debug\net10.0-android\android-arm64 -Recurse -Filter '*-Signed.apk' | Select-Object -First 1
           if (-not $apk) {
-            $apk = Get-ChildItem .\src\ClipRemote.Mobile\bin\Debug\net10.0-android -Recurse -Filter '*.apk' | Select-Object -First 1
+            $apk = Get-ChildItem .\src\ClipRemote.Mobile\bin\Debug\net10.0-android\android-arm64 -Recurse -Filter '*.apk' | Select-Object -First 1
           }
           if (-not $apk) {
-            throw 'No se generó ningún APK.'
+            throw 'No se generó ningún APK ARM64.'
           }
-          Copy-Item $apk.FullName .\artifacts\ClipRemote.Mobile\ClipRemote-Mobile.apk
+          Copy-Item $apk.FullName .\artifacts\ClipRemote.Mobile\ClipRemote-Mobile-arm64.apk
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: ClipRemote-Mobile-APK
-          path: .\artifacts\ClipRemote.Mobile\ClipRemote-Mobile.apk
+          name: ClipRemote-Mobile-ARM64-APK
+          path: .\artifacts\ClipRemote.Mobile\ClipRemote-Mobile-arm64.apk
           if-no-files-found: error
