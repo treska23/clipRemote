@@ -11,5 +11,8 @@
     <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- The APK is installed manually with adb, so it must be self-contained.
+         Debug Fast Deployment leaves managed assemblies outside the APK. -->
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
   </PropertyGroup>
 </Project>
