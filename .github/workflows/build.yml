@@ -26,4 +26,4 @@ jobs:
         run: dotnet build ClipRemote.sln --configuration Release --no-restore
 
       - name: Publish portable Surface build
-        run: dotnet publish .\src\ClipRemote.Agent\ClipRemote.Agent.csproj -c Release -r win-x64 --self-contained true --no-restore -o .\artifacts\ClipRemote.Agent
+        run: dotnet publish .\src\ClipRemote.Agent\ClipRemote.Agent.csproj -c Release -r win-x64 --self-contained true -o .\artifacts\ClipRemote.Agent
