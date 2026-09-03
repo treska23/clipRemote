@@ -118,10 +118,13 @@
       <DpadLeft>113</DpadLeft>
       <DpadRight>114</DpadRight>
 
-      <L2>119</L2>
-      <R2>120</R2>
+      <!-- Shoulder buttons -->
+      <!-- R1 = zoom in (F9), R2 = zoom out (F8) -->
+      <R1>120</R1>
+      <R2>119</R2>
+      <!-- L1 = redo (F11), L2 = undo (F10) -->
       <L1>122</L1>
-      <R1>121</R1>
+      <L2>121</L2>
 
       <LYNeg>123</LYNeg>
       <LYPos>124</LYPos>
