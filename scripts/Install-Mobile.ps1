@@ -225,15 +225,25 @@ Write-Host "Móvil: $($deviceInfo.Manufacturer) $($deviceInfo.Model)"
 Write-Host "Serial: $serial"
 Write-Host "ABI: $abiList"
 Write-Host "APK: $apkPath"
-Write-Host 'Instalando/actualizando ClipRemote...'
 
-& $adb -s $serial install -r $apkPath
+$package = 'com.treska23.clipremote'
+$installed = ((& $adb -s $serial shell pm list packages $package 2>$null) -join "`n")
+if ($installed -match [regex]::Escape($package)) {
+    Write-Host 'Quitando instalación anterior para limpiar restos de Fast Deployment...'
+    & $adb -s $serial uninstall $package | Write-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw 'No pude desinstalar la versión anterior de ClipRemote.'
+    }
+}
+
+Write-Host 'Instalando ClipRemote autocontenido...'
+& $adb -s $serial install $apkPath
 if ($LASTEXITCODE -ne 0) {
     throw "adb install falló con código $LASTEXITCODE."
 }
 
 $provisioning = Get-AgentProvisioning
-& $adb -s $serial shell am force-stop com.treska23.clipremote | Out-Null
+& $adb -s $serial shell am force-stop $package | Out-Null
 $component = 'com.treska23.clipremote/com.treska23.clipremote.MainActivity'
 
 if ($provisioning) {
@@ -253,4 +263,10 @@ if ($LASTEXITCODE -ne 0 -or ($launchOutput -join "`n") -match 'Error type|does n
     throw 'ClipRemote se instaló, pero Android no pudo abrir la Activity.'
 }
 
-Write-Host 'ClipRemote instalado y abierto en el Oppo.' -ForegroundColor Green
+Start-Sleep -Seconds 2
+$processId = ((& $adb -s $serial shell pidof $package 2>$null) -join '').Trim()
+if (-not $processId) {
+    throw 'ClipRemote se instaló y Android lanzó la Activity, pero el proceso volvió a cerrarse.'
+}
+
+Write-Host "ClipRemote instalado y ejecutándose en el Oppo · PID $processId" -ForegroundColor Green
