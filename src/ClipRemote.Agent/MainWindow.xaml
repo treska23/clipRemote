@@ -30,7 +30,7 @@
                 <TextBlock Text="{Binding Status}" Margin="0,5,0,18" FontSize="20" Foreground="{StaticResource AccentBrush}" />
 
                 <TextBlock Text="DIRECCIÓN DEL PC" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedTextBrush}" />
-                <TextBox Text="{Binding Address}"
+                <TextBox Text="{Binding Address, Mode=OneWay}"
                          Margin="0,5,0,18"
                          IsReadOnly="True"
                          BorderThickness="0"
@@ -39,7 +39,7 @@
                          FontSize="16" />
 
                 <TextBlock Text="TOKEN DE EMPAREJAMIENTO" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedTextBrush}" />
-                <TextBox Text="{Binding PairingToken}"
+                <TextBox Text="{Binding PairingToken, Mode=OneWay}"
                          Margin="0,5,0,18"
                          IsReadOnly="True"
                          BorderThickness="0"
@@ -49,7 +49,7 @@
                          FontSize="15" />
 
                 <TextBlock Text="CONFIGURACIÓN" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedTextBrush}" />
-                <TextBox Text="{Binding SettingsPath}"
+                <TextBox Text="{Binding SettingsPath, Mode=OneWay}"
                          Margin="0,5,0,0"
                          IsReadOnly="True"
                          BorderThickness="0"
