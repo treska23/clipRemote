@@ -4,6 +4,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClipRemote.Agent", "src\ClipRemote.Agent\ClipRemote.Agent.csproj", "{F8CB0CE6-47A8-43AA-9360-27EAB31CC34D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClipRemote.Mobile", "src\ClipRemote.Mobile\ClipRemote.Mobile.csproj", "{D6A47D04-4F78-4F5D-9D0A-682A12D50652}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,5 +16,7 @@ Global
 		{F8CB0CE6-47A8-43AA-9360-27EAB31CC34D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F8CB0CE6-47A8-43AA-9360-27EAB31CC34D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F8CB0CE6-47A8-43AA-9360-27EAB31CC34D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6A47D04-4F78-4F5D-9D0A-682A12D50652}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6A47D04-4F78-4F5D-9D0A-682A12D50652}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 EndGlobal
