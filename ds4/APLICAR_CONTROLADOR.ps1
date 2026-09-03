@@ -1,5 +1,6 @@
 $ErrorActionPreference = "Stop"
 
+$Version = "2026.09.03-2"
 $RawBase = "https://raw.githubusercontent.com/treska23/clipRemote/main/ds4"
 $ProfileUrl = "$RawBase/ClipStudio_DualShock4.xml"
 $ProfileName = "ClipStudio_DualShock4.xml"
@@ -32,6 +33,7 @@ function Get-Sqlite {
     New-Item -ItemType Directory -Path $tools -Force | Out-Null
     $exe = Get-ChildItem -LiteralPath $tools -Filter sqlite3.exe -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
     if($exe){ return $exe.FullName }
+
     $zip = Join-Path $tools "sqlite.zip"
     $extract = Join-Path $tools "sqlite"
     Download "https://www.sqlite.org/2026/sqlite-tools-win-x64-3530400.zip" $zip
@@ -56,6 +58,7 @@ function Find-Csp {
         (Join-Path $env:USERPROFILE "OneDrive\Documentos\CELSYS_EN"),
         (Join-Path $env:USERPROFILE "OneDrive\Documents\CELSYS_EN")
     ) | Select-Object -Unique
+
     $all=@()
     foreach($r in $roots){
         if($r -and (Test-Path -LiteralPath $r)){
@@ -63,6 +66,7 @@ function Find-Csp {
                 Where-Object {$_.FullName -match '[\\/]Shortcut[\\/]default\.khc$'}
         }
     }
+
     foreach($db in @($all | Sort-Object LastWriteTime -Descending -Unique)){
         $base = Split-Path (Split-Path $db.FullName -Parent) -Parent
         $tool = Join-Path $base "Tool\EditImageTool.todb"
@@ -73,11 +77,11 @@ function Find-Csp {
     return $null
 }
 
-"CLIP STUDIO + DUALSHOCK 4 - ACTUALIZADOR REMOTO" | Set-Content -LiteralPath $Log -Encoding UTF8
+"CLIP STUDIO + DUALSHOCK 4 - ACTUALIZADOR REMOTO $Version" | Set-Content -LiteralPath $Log -Encoding UTF8
 Log ("Fecha: " + (Get-Date))
 
 if(Get-Process CLIPStudioPaint -ErrorAction SilentlyContinue){
-    Fail "Cierra CLIP STUDIO PAINT y vuelve a ejecutar ACTUALIZAR_CONTROLADOR.cmd."
+    Fail "Cierra CLIP STUDIO PAINT y vuelve a ejecutar el actualizador."
 }
 
 $tempProfile = Join-Path $env:TEMP ("ClipStudio_DualShock4_" + [guid]::NewGuid().ToString("N") + ".xml")
@@ -101,9 +105,11 @@ Copy-Item $csp.ToolDb $toolBackup -Force
 Log ("Backup CSP: " + $backupDir)
 
 try {
+    # Dedicated plain function keys used only as the bridge from DS4Windows to CSP.
+    # F2/F3 are now stabilization -/+ because F6/F7 were unreliable on this setup.
     $menuMap=@(
-        @("toolbrushrevisionminus","F6"),
-        @("toolbrushrevisionplus","F7"),
+        @("toolbrushrevisionminus","F2"),
+        @("toolbrushrevisionplus","F3"),
         @("viewzoomout","F8"),
         @("viewzoomin","F9"),
         @("layerrasternew","F10"),
@@ -115,8 +121,10 @@ try {
         @("canvasscrollup","F16"),
         @("canvasscrolldown","F17")
     )
+
     foreach($p in $menuMap){
-        $cmd=$p[0].Replace("'","''"); $key=$p[1].Replace("'","''")
+        $cmd=$p[0].Replace("'","''")
+        $key=$p[1].Replace("'","''")
         $count=[int](Sql $sqlite $csp.ShortcutDb ("SELECT COUNT(*) FROM shortcutmenu WHERE menucommand='"+$cmd+"';"))
         if($count -gt 0){
             Sql $sqlite $csp.ShortcutDb ("UPDATE shortcutmenu SET shortcut=NULL, modifier=0 WHERE shortcut='"+$key+"' AND modifier=0 AND menucommand<>'"+$cmd+"';") | Out-Null
@@ -127,6 +135,7 @@ try {
         }
     }
 
+    # Exact requested subtool: Lápiz más oscuro -> F5.
     $safe="Lápiz más oscuro".Replace("'","''")
     $n=[int](Sql $sqlite $csp.ToolDb ("SELECT COUNT(*) FROM Node WHERE NodeName='"+$safe+"';"))
     if($n -lt 1){
@@ -158,6 +167,7 @@ if($ds4.Count -gt 0){
     $ds4 | Stop-Process -Force
     Start-Sleep -Milliseconds 800
 }
+
 if(Test-Path $target){ Copy-Item $target ($target+".bak_"+$stamp) -Force }
 Copy-Item $tempProfile $target -Force
 Remove-Item $tempProfile -Force -ErrorAction SilentlyContinue
@@ -166,10 +176,9 @@ Log ("Perfil DS4Windows instalado: " + $target)
 if($ds4Exe -and (Test-Path $ds4Exe)){ Start-Process $ds4Exe }
 
 Write-Host ""
-Write-Host "CONTROLADOR ACTUALIZADO." -ForegroundColor Green
-Write-Host "Perfil: ClipStudio_DualShock4" -ForegroundColor Green
+Write-Host ("CONTROLADOR ACTUALIZADO - " + $Version) -ForegroundColor Green
+Write-Host "Estabilizacion: cruceta izquierda/derecha = F2/F3" -ForegroundColor Green
+Write-Host "Touchpad: modo raton forzado + click izquierdo" -ForegroundColor Green
 Write-Host ""
-Write-Host "No necesitas descargar otro perfil la proxima vez." -ForegroundColor Cyan
-Write-Host "Dime los cambios en ChatGPT, y luego vuelve a ejecutar el mismo ACTUALIZAR_CONTROLADOR.cmd." -ForegroundColor Cyan
-Write-Host ""
+Write-Host "Si DS4Windows no conserva el perfil en el mando, selecciona ClipStudio_DualShock4 una vez en Controllers." -ForegroundColor Yellow
 Write-Host ("Log: " + $Log)
