@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$Version = "2026.09.03-FIX4"
+$Version = "2026.09.03-FIX5"
 $RawBase = "https://raw.githubusercontent.com/treska23/clipRemote/main/ds4"
 $ProfileUrl = "$RawBase/ClipStudio_DualShock4.xml"
 $ProfileName = "ClipStudio_DualShock4"
@@ -135,19 +135,34 @@ Log ("Backups CSP: " + $backupDir)
 Log ("Backups DS4: " + $ds4Backup)
 
 # --- CLIP STUDIO -------------------------------------------------------
-# The previous mapping used toolbrushrevisionminus/plus. That is NOT the
-# Stabilization control. CSP stores Stabilization as toolflickerreduction.
 try {
     if((Sql $sqlite.FullName $csp.ShortcutDb "PRAGMA integrity_check;") -ne "ok"){ throw "default.khc no pasa integrity_check antes de cambiarlo." }
 
-    Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL' WHERE modifier=0 AND shortcut IN ('F2','F3');" | Out-Null
+    # Stabilization: real CSP commands.
+    Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL' WHERE modifier=0 AND shortcut IN ('F2','F3') AND menucommand NOT IN ('toolflickerreductionminus','toolflickerreductionplus');" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL', modifier=0 WHERE menucommand IN ('toolbrushrevisionminus','toolbrushrevisionplus');" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='F2', modifier=0 WHERE menucommand='toolflickerreductionminus';" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='F3', modifier=0 WHERE menucommand='toolflickerreductionplus';" | Out-Null
 
+    # Zoom: R1/R2 will emit F9/F8. Keep these as dedicated plain shortcuts.
+    Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL' WHERE modifier=0 AND shortcut IN ('F8','F9') AND menucommand NOT IN ('viewzoomout','viewzoomin');" | Out-Null
+    Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='F8', modifier=0 WHERE menucommand='viewzoomout';" | Out-Null
+    Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='F9', modifier=0 WHERE menucommand='viewzoomin';" | Out-Null
+
+    # Undo/redo: preserve Ctrl+Z / Ctrl+Y and ADD dedicated F10/F11 rows for the pad.
+    # F10/F11 were previously used for create/delete layer; those plain assignments are released.
+    Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL' WHERE modifier=0 AND shortcut IN ('F10','F11') AND menucommand NOT IN ('undo','redo');" | Out-Null
+    Sql $sqlite.FullName $csp.ShortcutDb "DELETE FROM shortcutmenu WHERE menucommand='undo' AND shortcut='F10' AND modifier=0;" | Out-Null
+    Sql $sqlite.FullName $csp.ShortcutDb "DELETE FROM shortcutmenu WHERE menucommand='redo' AND shortcut='F11' AND modifier=0;" | Out-Null
+    Sql $sqlite.FullName $csp.ShortcutDb "INSERT INTO shortcutmenu(menucommandtype,menucommand,shortcut,modifier) VALUES('basiccommand','undo','F10',0);" | Out-Null
+    Sql $sqlite.FullName $csp.ShortcutDb "INSERT INTO shortcutmenu(menucommandtype,menucommand,shortcut,modifier) VALUES('basiccommand','redo','F11',0);" | Out-Null
+
     $minus=Sql $sqlite.FullName $csp.ShortcutDb "SELECT shortcut||'|'||modifier FROM shortcutmenu WHERE menucommand='toolflickerreductionminus';"
     $plus=Sql $sqlite.FullName $csp.ShortcutDb "SELECT shortcut||'|'||modifier FROM shortcutmenu WHERE menucommand='toolflickerreductionplus';"
+    $undoCount=[int](Sql $sqlite.FullName $csp.ShortcutDb "SELECT COUNT(*) FROM shortcutmenu WHERE menucommand='undo' AND shortcut='F10' AND modifier=0;")
+    $redoCount=[int](Sql $sqlite.FullName $csp.ShortcutDb "SELECT COUNT(*) FROM shortcutmenu WHERE menucommand='redo' AND shortcut='F11' AND modifier=0;")
     if($minus -ne "F2|0" -or $plus -ne "F3|0"){ throw "No se pudo verificar la asignacion de estabilizacion." }
+    if($undoCount -lt 1 -or $redoCount -lt 1){ throw "No se pudo verificar deshacer/rehacer." }
 
     # Keep the exact requested pencil on F5.
     $safe="Lápiz más oscuro".Replace("'","''")
@@ -158,7 +173,9 @@ try {
     }
 
     if((Sql $sqlite.FullName $csp.ShortcutDb "PRAGMA integrity_check;") -ne "ok"){ throw "default.khc no pasa integrity_check despues del cambio." }
-    Log "Estabilizacion CSP: izquierda=toolflickerreductionminus/F2; derecha=toolflickerreductionplus/F3"
+    Log "Estabilizacion CSP: izquierda=F2; derecha=F3"
+    Log "Zoom CSP: F9=acercar; F8=alejar"
+    Log "Historial CSP: F10=deshacer; F11=rehacer (Ctrl+Z/Ctrl+Y conservados)"
 }
 catch {
     Copy-Item -LiteralPath $khcBackup -Destination $csp.ShortcutDb -Force
@@ -182,9 +199,6 @@ Copy-Item -LiteralPath $tempProfile -Destination (Join-Path $profilesDir ($Profi
 Remove-Item -LiteralPath $tempProfile -Force -ErrorAction SilentlyContinue
 
 # --- DS4 Copycat -------------------------------------------------------
-# This controller is detected as a DS4 v1 over Bluetooth but its touch surface
-# does not produce mouse input even with the Default profile. Enable DS4Windows'
-# device-specific Copycat handling for this controller.
 $ccPath=Join-Path $ds4Root "ControllerConfigs.xml"
 if(Test-Path -LiteralPath $ccPath){
     [xml]$cc=Get-Content -LiteralPath $ccPath -Raw -Encoding UTF8
@@ -216,8 +230,6 @@ Save-XmlUtf8 $cc $ccPath
 Log ("Copycat=True para " + $mac)
 
 # --- Link this physical controller to our profile ----------------------
-# Without LinkedProfiles.xml DS4Windows starts with 'not using a profile'
-# after every restart, which is exactly what the diagnostic logs showed.
 $lpPath=Join-Path $ds4Root "LinkedProfiles.xml"
 if(Test-Path -LiteralPath $lpPath){
     [xml]$lp=Get-Content -LiteralPath $lpPath -Raw -Encoding UTF8
@@ -237,7 +249,7 @@ $linkNode.InnerText=$ProfileName
 Save-XmlUtf8 $lp $lpPath
 Log ("Perfil vinculado: " + $elementName + " -> " + $ProfileName)
 
-# Restart DS4Windows so Copycat and the linked profile are loaded from startup.
+# Restart DS4Windows so the updated profile is loaded immediately.
 if($ds4Exe -and (Test-Path -LiteralPath $ds4Exe)){
     Start-Process -FilePath $ds4Exe
     Start-Sleep -Seconds 2
@@ -246,12 +258,12 @@ if($ds4Exe -and (Test-Path -LiteralPath $ds4Exe)){
 Write-Host ""
 Write-Host ("CONTROLADOR ACTUALIZADO - " + $Version) -ForegroundColor Green
 Write-Host ""
-Write-Host "Corregido:" -ForegroundColor Cyan
-Write-Host "  - Cruceta izquierda/derecha = estabilizacion real -/+"
-Write-Host "  - Copycat activado para recuperar funciones completas del DS4 por Bluetooth"
-Write-Host "  - Perfil ClipStudio_DualShock4 vinculado automaticamente al mando"
-Write-Host "  - Touchpad sigue configurado como raton + clic izquierdo"
+Write-Host "Botones:" -ForegroundColor Cyan
+Write-Host "  R1 = acercar zoom"
+Write-Host "  R2 = alejar zoom"
+Write-Host "  L1 = rehacer"
+Write-Host "  L2 = deshacer"
 Write-Host ""
-Write-Host "Abre Clip Studio y prueba cruceta izquierda/derecha y el touchpad." -ForegroundColor Yellow
-Write-Host "Si el touchpad sigue sin responder, apaga y vuelve a encender el mando una vez para forzar una conexion Bluetooth nueva." -ForegroundColor Yellow
+Write-Host "Se mantienen la estabilizacion, el touchpad, Copycat y el perfil vinculado." -ForegroundColor Green
+Write-Host "Abre Clip Studio y prueba los cuatro botones." -ForegroundColor Yellow
 Write-Host ("Log: " + $log)
