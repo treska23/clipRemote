@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Clip Studio Paint drawing profile for DualShock 4 - remotely maintained -->
-<!-- Compatible with DS4Windows profile schema v5 -->
 <DS4Windows app_version="3.3.3" config_version="5">
-  <touchToggle>True</touchToggle>
+  <touchToggle>False</touchToggle>
   <idleDisconnectTimeout>0</idleDisconnectTimeout>
   <outputDataToDS4>True</outputDataToDS4>
   <Color>55,95,180</Color>
@@ -12,7 +11,7 @@
   <ledAsBatteryIndicator>False</ledAsBatteryIndicator>
   <FlashType>0</FlashType>
   <flashBatteryAt>0</flashBatteryAt>
-  <touchSensitivity>100</touchSensitivity>
+  <touchSensitivity>130</touchSensitivity>
   <LowColor>0,0,0</LowColor>
   <ChargingColor>0,0,0</ChargingColor>
   <FlashColor>0,0,0</FlashColor>
@@ -36,7 +35,6 @@
   <Rainbow>0</Rainbow>
   <MaxSatRainbow>100</MaxSatRainbow>
 
-  <!-- Stick deadzones: enough to avoid accidental layer/canvas movement -->
   <LSDeadZone>35</LSDeadZone>
   <RSDeadZone>25</RSDeadZone>
   <LSAntiDeadZone>0</LSAntiDeadZone>
@@ -57,12 +55,10 @@
   <MouseAcceleration>False</MouseAcceleration>
   <ButtonMouseVerticalScale>100</ButtonMouseVerticalScale>
   <LaunchProgram />
-
-  <!-- No virtual Xbox pad is needed for Clip Studio -->
   <DinputOnly>True</DinputOnly>
   <StartTouchpadOff>False</StartTouchpadOff>
 
-  <!-- Finger on DS4 touchpad = mouse pointer -->
+  <!-- Touchpad forced to mouse mode -->
   <TouchpadOutputMode>Mouse</TouchpadOutputMode>
   <TrackballMode>False</TrackballMode>
   <TrackballFriction>10</TrackballFriction>
@@ -99,48 +95,40 @@
 
   <Control>
     <Button>
-      <!-- R3 = right mouse click -->
+      <!-- Physical touchpad press = left mouse button anywhere on pad -->
+      <TouchLeft>Left Mouse Button</TouchLeft>
+      <TouchRight>Left Mouse Button</TouchRight>
+      <TouchUpper>Left Mouse Button</TouchUpper>
+      <TouchMulti>Left Mouse Button</TouchMulti>
       <R3>Right Mouse Button</R3>
       <PS>Unbound</PS>
     </Button>
 
     <Key>
-      <!-- Face buttons -->
-      <!-- X / Cross = exact "Lápiz más oscuro", assigned by installer to F5 -->
       <Cross>116</Cross>
-      <!-- Triangle = Brush tool (B) -->
       <Triangle>66</Triangle>
-      <!-- Square = Pen tool (P) -->
       <Square>80</Square>
-      <!-- Circle = Eraser tool (E) -->
       <Circle>69</Circle>
 
-      <!-- D-pad: current tool properties -->
-      <!-- Up / Down = brush size + / - (Clip Studio defaults 1 / 2) -->
+      <!-- Size + / - -->
       <DpadUp>49</DpadUp>
       <DpadDown>50</DpadDown>
 
-      <!-- Left / Right = stabilization - / + -->
-      <DpadLeft>117</DpadLeft>
-      <DpadRight>118</DpadRight>
+      <!-- Stabilization - / + : F2 / F3 -->
+      <DpadLeft>113</DpadLeft>
+      <DpadRight>114</DpadRight>
 
-      <!-- L2 / R2 = zoom - / + -->
       <L2>119</L2>
       <R2>120</R2>
-
-      <!-- L1 delete layer, R1 new raster layer -->
       <L1>122</L1>
       <R1>121</R1>
 
-      <!-- Left stick vertical = layer navigation -->
       <LYNeg>123</LYNeg>
       <LYPos>124</LYPos>
 
-      <!-- Right stick = canvas movement -->
-      <!-- Horizontal inverted: stick left moves page left, stick right moves page right -->
+      <!-- Right stick: page follows stick direction -->
       <RXNeg>126</RXNeg>
       <RXPos>125</RXPos>
-      <!-- Vertical inverted to match natural page movement -->
       <RYNeg>128</RYNeg>
       <RYPos>127</RYPos>
     </Key>
