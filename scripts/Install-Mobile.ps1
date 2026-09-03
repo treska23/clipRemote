@@ -100,6 +100,29 @@ function Ensure-WirelessDevice {
     return $match
 }
 
+function Get-DeviceAbi {
+    param([string]$Adb, [string]$Serial)
+
+    $abiList = (& $Adb -s $Serial shell getprop ro.product.cpu.abilist).Trim()
+    if (-not $abiList) {
+        $abiList = (& $Adb -s $Serial shell getprop ro.product.cpu.abi).Trim()
+    }
+
+    return $abiList
+}
+
+function Assert-ApkLooksCompatible {
+    param([string]$AbiList, [string]$ApkPath)
+
+    if ($AbiList -notmatch 'arm64-v8a' -and $ApkPath -match 'arm64') {
+        throw "El móvil solo anuncia '$AbiList', pero el APK es ARM64. Usa ClipRemote-Mobile-armv7.apk."
+    }
+
+    if ($AbiList -match 'armeabi-v7a' -and $ApkPath -match 'armv7|android-arm') {
+        return
+    }
+}
+
 function Get-AgentProvisioning {
     $settingsPath = Join-Path $env:LOCALAPPDATA 'ClipRemote\settings.json'
     if (-not (Test-Path $settingsPath)) { return $null }
@@ -136,9 +159,12 @@ function Get-AgentProvisioning {
 $adb = Find-Adb
 $serial = Ensure-WirelessDevice $adb $Device
 $apkPath = Find-Apk $Apk
+$abiList = Get-DeviceAbi $adb $serial
+Assert-ApkLooksCompatible $abiList $apkPath
 
 Write-Host "ADB: $adb"
 Write-Host "Oppo: $serial"
+Write-Host "ABI: $abiList"
 Write-Host "APK: $apkPath"
 Write-Host 'Instalando/actualizando ClipRemote...'
 
