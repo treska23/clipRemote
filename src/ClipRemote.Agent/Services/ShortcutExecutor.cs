@@ -62,7 +62,7 @@ public sealed class ShortcutExecutor
             inputs.ToArray(),
             Marshal.SizeOf<Input>());
 
-        return sent == inputs.Count
+        return sent == (uint)inputs.Count
             ? (true, "Hecho.")
             : (false, "Windows no pudo enviar el atajo completo.");
     }
@@ -139,10 +139,10 @@ public sealed class ShortcutExecutor
         return key != 0;
     }
 
-    private static Input KeyDown(ushort key) => KeyboardInput(key, 0);
-    private static Input KeyUp(ushort key) => KeyboardInput(key, KeyEventKeyUp);
+    private static Input KeyDown(ushort key) => CreateKeyboardInput(key, 0);
+    private static Input KeyUp(ushort key) => CreateKeyboardInput(key, KeyEventKeyUp);
 
-    private static Input KeyboardInput(ushort key, uint flags) => new()
+    private static Input CreateKeyboardInput(ushort key, uint flags) => new()
     {
         Type = InputKeyboard,
         Union = new InputUnion
