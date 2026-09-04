@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$Version = "2026.09.03-FIX5"
+$Version = "2026.09.04-FIX6"
 $RawBase = "https://raw.githubusercontent.com/treska23/clipRemote/main/ds4"
 $ProfileUrl = "$RawBase/ClipStudio_DualShock4.xml"
 $ProfileName = "ClipStudio_DualShock4"
@@ -138,19 +138,25 @@ Log ("Backups DS4: " + $ds4Backup)
 try {
     if((Sql $sqlite.FullName $csp.ShortcutDb "PRAGMA integrity_check;") -ne "ok"){ throw "default.khc no pasa integrity_check antes de cambiarlo." }
 
-    # Stabilization: real CSP commands.
+    # Stabilization: square/circle-family mappings use dedicated F2/F3 bridge keys.
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL' WHERE modifier=0 AND shortcut IN ('F2','F3') AND menucommand NOT IN ('toolflickerreductionminus','toolflickerreductionplus');" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL', modifier=0 WHERE menucommand IN ('toolbrushrevisionminus','toolbrushrevisionplus');" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='F2', modifier=0 WHERE menucommand='toolflickerreductionminus';" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='F3', modifier=0 WHERE menucommand='toolflickerreductionplus';" | Out-Null
 
-    # Zoom: R1/R2 will emit F9/F8. Keep these as dedicated plain shortcuts.
+    # Select all / clear selected: dedicated F4/F6 bridge keys for L3/R3.
+    Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL' WHERE modifier=0 AND shortcut IN ('F4','F6') AND menucommand NOT IN ('selectall','clear');" | Out-Null
+    Sql $sqlite.FullName $csp.ShortcutDb "DELETE FROM shortcutmenu WHERE menucommand='selectall' AND shortcut='F4' AND modifier=0;" | Out-Null
+    Sql $sqlite.FullName $csp.ShortcutDb "DELETE FROM shortcutmenu WHERE menucommand='clear' AND shortcut='F6' AND modifier=0;" | Out-Null
+    Sql $sqlite.FullName $csp.ShortcutDb "INSERT INTO shortcutmenu(menucommandtype,menucommand,shortcut,modifier) VALUES('basiccommand','selectall','F4',0);" | Out-Null
+    Sql $sqlite.FullName $csp.ShortcutDb "INSERT INTO shortcutmenu(menucommandtype,menucommand,shortcut,modifier) VALUES('basiccommand','clear','F6',0);" | Out-Null
+
+    # Zoom: X/Circle emit F8/F9.
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL' WHERE modifier=0 AND shortcut IN ('F8','F9') AND menucommand NOT IN ('viewzoomout','viewzoomin');" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='F8', modifier=0 WHERE menucommand='viewzoomout';" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='F9', modifier=0 WHERE menucommand='viewzoomin';" | Out-Null
 
-    # Undo/redo: preserve Ctrl+Z / Ctrl+Y and ADD dedicated F10/F11 rows for the pad.
-    # F10/F11 were previously used for create/delete layer; those plain assignments are released.
+    # Undo/redo: preserve Ctrl+Z / Ctrl+Y and add dedicated F10/F11 rows.
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL' WHERE modifier=0 AND shortcut IN ('F10','F11') AND menucommand NOT IN ('undo','redo');" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "DELETE FROM shortcutmenu WHERE menucommand='undo' AND shortcut='F10' AND modifier=0;" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "DELETE FROM shortcutmenu WHERE menucommand='redo' AND shortcut='F11' AND modifier=0;" | Out-Null
@@ -159,12 +165,15 @@ try {
 
     $minus=Sql $sqlite.FullName $csp.ShortcutDb "SELECT shortcut||'|'||modifier FROM shortcutmenu WHERE menucommand='toolflickerreductionminus';"
     $plus=Sql $sqlite.FullName $csp.ShortcutDb "SELECT shortcut||'|'||modifier FROM shortcutmenu WHERE menucommand='toolflickerreductionplus';"
+    $selectAllCount=[int](Sql $sqlite.FullName $csp.ShortcutDb "SELECT COUNT(*) FROM shortcutmenu WHERE menucommand='selectall' AND shortcut='F4' AND modifier=0;")
+    $clearCount=[int](Sql $sqlite.FullName $csp.ShortcutDb "SELECT COUNT(*) FROM shortcutmenu WHERE menucommand='clear' AND shortcut='F6' AND modifier=0;")
     $undoCount=[int](Sql $sqlite.FullName $csp.ShortcutDb "SELECT COUNT(*) FROM shortcutmenu WHERE menucommand='undo' AND shortcut='F10' AND modifier=0;")
     $redoCount=[int](Sql $sqlite.FullName $csp.ShortcutDb "SELECT COUNT(*) FROM shortcutmenu WHERE menucommand='redo' AND shortcut='F11' AND modifier=0;")
     if($minus -ne "F2|0" -or $plus -ne "F3|0"){ throw "No se pudo verificar la asignacion de estabilizacion." }
+    if($selectAllCount -lt 1 -or $clearCount -lt 1){ throw "No se pudo verificar seleccionar todo/borrar seleccion." }
     if($undoCount -lt 1 -or $redoCount -lt 1){ throw "No se pudo verificar deshacer/rehacer." }
 
-    # Keep the exact requested pencil on F5.
+    # Keep the previously dedicated exact pencil shortcut available on F5.
     $safe="Lápiz más oscuro".Replace("'","''")
     $n=[int](Sql $sqlite.FullName $csp.ToolDb ("SELECT COUNT(*) FROM Node WHERE NodeName='"+$safe+"';"))
     if($n -gt 0){
@@ -173,9 +182,10 @@ try {
     }
 
     if((Sql $sqlite.FullName $csp.ShortcutDb "PRAGMA integrity_check;") -ne "ok"){ throw "default.khc no pasa integrity_check despues del cambio." }
-    Log "Estabilizacion CSP: izquierda=F2; derecha=F3"
-    Log "Zoom CSP: F9=acercar; F8=alejar"
-    Log "Historial CSP: F10=deshacer; F11=rehacer (Ctrl+Z/Ctrl+Y conservados)"
+    Log "Estabilizacion CSP: F2=menos; F3=mas"
+    Log "Seleccion CSP: F4=seleccionar todo; F6=borrar seleccion"
+    Log "Zoom CSP: F8=alejar; F9=acercar"
+    Log "Historial CSP: F10=deshacer; F11=rehacer"
 }
 catch {
     Copy-Item -LiteralPath $khcBackup -Destination $csp.ShortcutDb -Force
@@ -258,12 +268,21 @@ if($ds4Exe -and (Test-Path -LiteralPath $ds4Exe)){
 Write-Host ""
 Write-Host ("CONTROLADOR ACTUALIZADO - " + $Version) -ForegroundColor Green
 Write-Host ""
-Write-Host "Botones:" -ForegroundColor Cyan
-Write-Host "  R1 = acercar zoom"
-Write-Host "  R2 = alejar zoom"
-Write-Host "  L1 = rehacer"
-Write-Host "  L2 = deshacer"
+Write-Host "Mapa actual:" -ForegroundColor Cyan
+Write-Host "  Cruceta arriba = pluma"
+Write-Host "  Cruceta abajo = lapiz"
+Write-Host "  Cruceta izquierda = deshacer"
+Write-Host "  Cruceta derecha = borrador"
+Write-Host "  X = alejar zoom"
+Write-Host "  Circulo = acercar zoom"
+Write-Host "  Cuadrado = bajar estabilizacion"
+Write-Host "  Triangulo = subir estabilizacion"
+Write-Host "  R1 = pincel"
+Write-Host "  R2 = seleccion"
+Write-Host "  L3 = seleccionar todo"
+Write-Host "  R3 = borrar seleccionados"
+Write-Host "  L1 = rehacer; L2 = deshacer"
 Write-Host ""
-Write-Host "Se mantienen la estabilizacion, el touchpad, Copycat y el perfil vinculado." -ForegroundColor Green
-Write-Host "Abre Clip Studio y prueba los cuatro botones." -ForegroundColor Yellow
+Write-Host "Se mantienen touchpad, Copycat, sticks y perfil vinculado." -ForegroundColor Green
+Write-Host "Abre Clip Studio y prueba este mapa." -ForegroundColor Yellow
 Write-Host ("Log: " + $log)
