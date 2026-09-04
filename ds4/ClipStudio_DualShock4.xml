@@ -108,15 +108,15 @@
       <Square>113</Square>     <!-- F2: stabilization - -->
       <Triangle>114</Triangle> <!-- F3: stabilization + -->
 
-      <!-- D-pad: drawing tools + undo -->
-      <DpadUp>80</DpadUp>      <!-- P: pen / nib -->
+      <!-- D-pad -->
+      <DpadUp>118</DpadUp>     <!-- F7: deselect -->
       <DpadDown>116</DpadDown> <!-- F5: exact 'Lápiz más oscuro' -->
       <DpadLeft>121</DpadLeft> <!-- F10: undo -->
       <DpadRight>69</DpadRight><!-- E: eraser -->
 
       <!-- Shoulder buttons -->
       <R1>66</R1>              <!-- B: brush -->
-      <R2>77</R2>              <!-- M: selection -->
+      <R2>115</R2>             <!-- F4: select all -->
       <L1>122</L1>             <!-- F11: redo -->
       <L2>121</L2>             <!-- F10: undo -->
 
