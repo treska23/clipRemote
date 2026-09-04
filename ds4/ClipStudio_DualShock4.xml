@@ -58,7 +58,6 @@
   <DinputOnly>True</DinputOnly>
   <StartTouchpadOff>False</StartTouchpadOff>
 
-  <!-- Touchpad forced to mouse mode -->
   <TouchpadOutputMode>Mouse</TouchpadOutputMode>
   <TrackballMode>False</TrackballMode>
   <TrackballFriction>10</TrackballFriction>
@@ -95,7 +94,6 @@
 
   <Control>
     <Button>
-      <!-- Physical touchpad press = left mouse button anywhere on pad -->
       <TouchLeft>Left Mouse Button</TouchLeft>
       <TouchRight>Left Mouse Button</TouchRight>
       <TouchUpper>Left Mouse Button</TouchUpper>
@@ -112,7 +110,7 @@
 
       <!-- D-pad: drawing tools + undo -->
       <DpadUp>80</DpadUp>      <!-- P: pen / nib -->
-      <DpadDown>76</DpadDown>  <!-- L: pencil -->
+      <DpadDown>116</DpadDown> <!-- F5: exact 'Lápiz más oscuro' -->
       <DpadLeft>121</DpadLeft> <!-- F10: undo -->
       <DpadRight>69</DpadRight><!-- E: eraser -->
 
@@ -129,7 +127,6 @@
       <LYNeg>123</LYNeg>
       <LYPos>124</LYPos>
 
-      <!-- Right stick: page follows stick direction -->
       <RXNeg>126</RXNeg>
       <RXPos>125</RXPos>
       <RYNeg>128</RYNeg>
