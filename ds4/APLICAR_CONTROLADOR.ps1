@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$Version = "2026.09.04-FIX6"
+$Version = "2026.09.04-FIX7"
 $RawBase = "https://raw.githubusercontent.com/treska23/clipRemote/main/ds4"
 $ProfileUrl = "$RawBase/ClipStudio_DualShock4.xml"
 $ProfileName = "ClipStudio_DualShock4"
@@ -138,17 +138,19 @@ Log ("Backups DS4: " + $ds4Backup)
 try {
     if((Sql $sqlite.FullName $csp.ShortcutDb "PRAGMA integrity_check;") -ne "ok"){ throw "default.khc no pasa integrity_check antes de cambiarlo." }
 
-    # Stabilization: square/circle-family mappings use dedicated F2/F3 bridge keys.
+    # Stabilization: square/triangle use dedicated F2/F3 bridge keys.
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL' WHERE modifier=0 AND shortcut IN ('F2','F3') AND menucommand NOT IN ('toolflickerreductionminus','toolflickerreductionplus');" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL', modifier=0 WHERE menucommand IN ('toolbrushrevisionminus','toolbrushrevisionplus');" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='F2', modifier=0 WHERE menucommand='toolflickerreductionminus';" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='F3', modifier=0 WHERE menucommand='toolflickerreductionplus';" | Out-Null
 
-    # Select all / clear selected: dedicated F4/F6 bridge keys for L3/R3.
-    Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL' WHERE modifier=0 AND shortcut IN ('F4','F6') AND menucommand NOT IN ('selectall','clear');" | Out-Null
+    # Selection bridge keys: F4=select all, F7=deselect, F6=clear selected.
+    Sql $sqlite.FullName $csp.ShortcutDb "UPDATE shortcutmenu SET shortcut='NULL' WHERE modifier=0 AND shortcut IN ('F4','F6','F7') AND menucommand NOT IN ('selectall','selectdeselect','clear');" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "DELETE FROM shortcutmenu WHERE menucommand='selectall' AND shortcut='F4' AND modifier=0;" | Out-Null
+    Sql $sqlite.FullName $csp.ShortcutDb "DELETE FROM shortcutmenu WHERE menucommand='selectdeselect' AND shortcut='F7' AND modifier=0;" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "DELETE FROM shortcutmenu WHERE menucommand='clear' AND shortcut='F6' AND modifier=0;" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "INSERT INTO shortcutmenu(menucommandtype,menucommand,shortcut,modifier) VALUES('basiccommand','selectall','F4',0);" | Out-Null
+    Sql $sqlite.FullName $csp.ShortcutDb "INSERT INTO shortcutmenu(menucommandtype,menucommand,shortcut,modifier) VALUES('basiccommand','selectdeselect','F7',0);" | Out-Null
     Sql $sqlite.FullName $csp.ShortcutDb "INSERT INTO shortcutmenu(menucommandtype,menucommand,shortcut,modifier) VALUES('basiccommand','clear','F6',0);" | Out-Null
 
     # Zoom: X/Circle emit F8/F9.
@@ -166,14 +168,15 @@ try {
     $minus=Sql $sqlite.FullName $csp.ShortcutDb "SELECT shortcut||'|'||modifier FROM shortcutmenu WHERE menucommand='toolflickerreductionminus';"
     $plus=Sql $sqlite.FullName $csp.ShortcutDb "SELECT shortcut||'|'||modifier FROM shortcutmenu WHERE menucommand='toolflickerreductionplus';"
     $selectAllCount=[int](Sql $sqlite.FullName $csp.ShortcutDb "SELECT COUNT(*) FROM shortcutmenu WHERE menucommand='selectall' AND shortcut='F4' AND modifier=0;")
+    $deselectCount=[int](Sql $sqlite.FullName $csp.ShortcutDb "SELECT COUNT(*) FROM shortcutmenu WHERE menucommand='selectdeselect' AND shortcut='F7' AND modifier=0;")
     $clearCount=[int](Sql $sqlite.FullName $csp.ShortcutDb "SELECT COUNT(*) FROM shortcutmenu WHERE menucommand='clear' AND shortcut='F6' AND modifier=0;")
     $undoCount=[int](Sql $sqlite.FullName $csp.ShortcutDb "SELECT COUNT(*) FROM shortcutmenu WHERE menucommand='undo' AND shortcut='F10' AND modifier=0;")
     $redoCount=[int](Sql $sqlite.FullName $csp.ShortcutDb "SELECT COUNT(*) FROM shortcutmenu WHERE menucommand='redo' AND shortcut='F11' AND modifier=0;")
     if($minus -ne "F2|0" -or $plus -ne "F3|0"){ throw "No se pudo verificar la asignacion de estabilizacion." }
-    if($selectAllCount -lt 1 -or $clearCount -lt 1){ throw "No se pudo verificar seleccionar todo/borrar seleccion." }
+    if($selectAllCount -lt 1 -or $deselectCount -lt 1 -or $clearCount -lt 1){ throw "No se pudo verificar seleccionar/deseleccionar/borrar seleccion." }
     if($undoCount -lt 1 -or $redoCount -lt 1){ throw "No se pudo verificar deshacer/rehacer." }
 
-    # Keep the previously dedicated exact pencil shortcut available on F5.
+    # Keep the exact requested pencil shortcut available on F5.
     $safe="Lápiz más oscuro".Replace("'","''")
     $n=[int](Sql $sqlite.FullName $csp.ToolDb ("SELECT COUNT(*) FROM Node WHERE NodeName='"+$safe+"';"))
     if($n -gt 0){
@@ -183,7 +186,7 @@ try {
 
     if((Sql $sqlite.FullName $csp.ShortcutDb "PRAGMA integrity_check;") -ne "ok"){ throw "default.khc no pasa integrity_check despues del cambio." }
     Log "Estabilizacion CSP: F2=menos; F3=mas"
-    Log "Seleccion CSP: F4=seleccionar todo; F6=borrar seleccion"
+    Log "Seleccion CSP: F4=seleccionar todo; F7=deseleccionar; F6=borrar seleccion"
     Log "Zoom CSP: F8=alejar; F9=acercar"
     Log "Historial CSP: F10=deshacer; F11=rehacer"
 }
@@ -269,8 +272,8 @@ Write-Host ""
 Write-Host ("CONTROLADOR ACTUALIZADO - " + $Version) -ForegroundColor Green
 Write-Host ""
 Write-Host "Mapa actual:" -ForegroundColor Cyan
-Write-Host "  Cruceta arriba = pluma"
-Write-Host "  Cruceta abajo = lapiz"
+Write-Host "  Cruceta arriba = deseleccionar"
+Write-Host "  Cruceta abajo = lapiz mas oscuro"
 Write-Host "  Cruceta izquierda = deshacer"
 Write-Host "  Cruceta derecha = borrador"
 Write-Host "  X = alejar zoom"
@@ -278,7 +281,7 @@ Write-Host "  Circulo = acercar zoom"
 Write-Host "  Cuadrado = bajar estabilizacion"
 Write-Host "  Triangulo = subir estabilizacion"
 Write-Host "  R1 = pincel"
-Write-Host "  R2 = seleccion"
+Write-Host "  R2 = seleccionar todo"
 Write-Host "  L3 = seleccionar todo"
 Write-Host "  R3 = borrar seleccionados"
 Write-Host "  L1 = rehacer; L2 = deshacer"
