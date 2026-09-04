@@ -100,31 +100,31 @@
       <TouchRight>Left Mouse Button</TouchRight>
       <TouchUpper>Left Mouse Button</TouchUpper>
       <TouchMulti>Left Mouse Button</TouchMulti>
-      <R3>Right Mouse Button</R3>
       <PS>Unbound</PS>
     </Button>
 
     <Key>
-      <Cross>116</Cross>
-      <Triangle>66</Triangle>
-      <Square>80</Square>
-      <Circle>69</Circle>
+      <!-- Face buttons -->
+      <Cross>119</Cross>       <!-- F8: zoom out -->
+      <Circle>120</Circle>     <!-- F9: zoom in -->
+      <Square>113</Square>     <!-- F2: stabilization - -->
+      <Triangle>114</Triangle> <!-- F3: stabilization + -->
 
-      <!-- Size + / - -->
-      <DpadUp>49</DpadUp>
-      <DpadDown>50</DpadDown>
-
-      <!-- Stabilization - / + : F2 / F3 -->
-      <DpadLeft>113</DpadLeft>
-      <DpadRight>114</DpadRight>
+      <!-- D-pad: drawing tools + undo -->
+      <DpadUp>80</DpadUp>      <!-- P: pen / nib -->
+      <DpadDown>76</DpadDown>  <!-- L: pencil -->
+      <DpadLeft>121</DpadLeft> <!-- F10: undo -->
+      <DpadRight>69</DpadRight><!-- E: eraser -->
 
       <!-- Shoulder buttons -->
-      <!-- R1 = zoom in (F9), R2 = zoom out (F8) -->
-      <R1>120</R1>
-      <R2>119</R2>
-      <!-- L1 = redo (F11), L2 = undo (F10) -->
-      <L1>122</L1>
-      <L2>121</L2>
+      <R1>66</R1>              <!-- B: brush -->
+      <R2>77</R2>              <!-- M: selection -->
+      <L1>122</L1>             <!-- F11: redo -->
+      <L2>121</L2>             <!-- F10: undo -->
+
+      <!-- Stick clicks -->
+      <L3>115</L3>             <!-- F4: select all -->
+      <R3>117</R3>             <!-- F6: clear/delete selected -->
 
       <LYNeg>123</LYNeg>
       <LYPos>124</LYPos>
